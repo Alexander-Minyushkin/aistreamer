@@ -17,6 +17,12 @@ import codecs
 import json
 import pandas as pd
 
+# Audio manipulations
+from gtts import gTTS
+from pydub import AudioSegment
+from tempfile import TemporaryFile
+from tempfile import SpooledTemporaryFile
+
 SENTENCE_SEPARATOR = '.'
 WORD_SEPARATOR = ' '
 
@@ -43,6 +49,17 @@ def read_json(path_to_file):
     
     return pd.DataFrame(gen_from_dict(d), columns=headers)
 
+def textToAudioSegment(wordsToSay):
+    # Convert text to sound
+    tts = gTTS(text=wordsToSay, lang='en')
+        
+    segmentFileName = "tmp/tmp.mp3"
+    tts.save(segmentFileName) # TODO move to temporary file
+                
+    segment = AudioSegment.from_mp3(segmentFileName)
+    
+    return segment
+
 if __name__ == '__main__':
     args = sys.argv
     usage = 'Usage: %s (db_name path_to_json)' % (args[0], )
@@ -58,8 +75,12 @@ if __name__ == '__main__':
     
     labels = read_json(path_to_file)
     
-    curr_time_mksec = 1000000
     usedBefore = set()
+    
+    fullTrack = textToAudioSegment("Hello, this AI streamer. Markov process on Reddit comments")
+    
+    curr_time_mksec = fullTrack.duration_seconds * 1000000
+    
     while (curr_time_mksec <  max(labels['end'])):
         observedBefore = set(labels[labels['start'] < curr_time_mksec]['Label'])
         candidates = list(observedBefore - usedBefore)
@@ -69,18 +90,25 @@ if __name__ == '__main__':
         if len(candidates)>0: seedWords = candidates[0]
         
         print str(curr_time_mksec ) + ' ' + seedWords
-        #print generator.generate_to_right(seedWords.split(), WORD_SEPARATOR)
+        wordsToSay = generator.generate_to_right(seedWords.split(), WORD_SEPARATOR)
+        print wordsToSay 
+        
+        segment = textToAudioSegment(wordsToSay)
+        
+        print segment.duration_seconds        
+        fullTrack = fullTrack + segment
         
         #print seedWords in usedBefore
         
         usedBefore = usedBefore.union(set([seedWords]))
         
+        if segment.duration_seconds < 1. :
+            curr_time_mksec = curr_time_mksec + 1000000
+        else:
+            curr_time_mksec = fullTrack.duration_seconds * 1000000
         
         
-        curr_time_mksec = curr_time_mksec + 1000000
-        
-        
-        
+    fullTrack.export("mashup2.mp3", format="mp3")
         
     
     
