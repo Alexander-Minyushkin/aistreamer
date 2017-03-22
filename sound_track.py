@@ -26,7 +26,7 @@ from tempfile import SpooledTemporaryFile
 SENTENCE_SEPARATOR = '.'
 WORD_SEPARATOR = ' '
 
-path_to_file = "data/labels/gta001_label.json"
+path_to_json = "data/labels/gta001_label.json"
 db_name = 'tmp'
 
 def read_json(path_to_file):
@@ -62,18 +62,19 @@ def textToAudioSegment(wordsToSay):
 
 if __name__ == '__main__':
     args = sys.argv
-    usage = 'Usage: %s (db_name path_to_json)' % (args[0], )
+    usage = 'Usage: %s (db_name path_to_json output_mp3_path)' % (args[0], )
 
-    if (len(args) < 2):
+    if (len(args) < 3):
         raise ValueError(usage)
 
     db_name  = args[1]
     path_to_json  = args[2]
+    output_mp3_path = args[3]
     
     db = Db(sqlite3.connect(db_name + '.db'), Sql())
     generator = GenratorWithSeed(db_name, db, Rnd())
     
-    labels = read_json(path_to_file)
+    labels = read_json(path_to_json)
     
     usedBefore = set()
     
@@ -89,13 +90,15 @@ if __name__ == '__main__':
         
         if len(candidates)>0: seedWords = candidates[0]
         
-        print str(curr_time_mksec ) + ' ' + seedWords
-        wordsToSay = generator.generate_to_right(seedWords.split(), WORD_SEPARATOR)
+        seedWordsToGen = seedWords.lower()
+        print str(curr_time_mksec ) + ' ' + seedWordsToGen 
+        wordsToSay = generator.generate_to_right(seedWordsToGen.split(), WORD_SEPARATOR)
         print wordsToSay 
         
         segment = textToAudioSegment(wordsToSay)
         
-        print segment.duration_seconds        
+        print segment.duration_seconds   
+        print "---------"
         fullTrack = fullTrack + segment
         
         #print seedWords in usedBefore
@@ -108,7 +111,7 @@ if __name__ == '__main__':
             curr_time_mksec = fullTrack.duration_seconds * 1000000
         
         
-    fullTrack.export("mashup2.mp3", format="mp3")
+    fullTrack.export(output_mp3_path, format="mp3")
         
     
     

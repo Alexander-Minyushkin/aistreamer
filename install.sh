@@ -1,3 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+# https://dev.to/thiht/shell-scripts-matter
 
 # Markov process tool for text generation
 git clone https://github.com/Alexander-Minyushkin/markov-text.git
