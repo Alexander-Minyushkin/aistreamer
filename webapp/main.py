@@ -1,4 +1,4 @@
-# Copyright 2015 Google Inc. All Rights Reserved.
+# Copyright 2016 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,28 +15,47 @@
 # [START app]
 import logging
 
-from flask import Flask, render_template
+# [START imports]
+from flask import Flask, render_template, request
+# [END imports]
 
-
+# [START create_app]
 app = Flask(__name__)
-
+# [END create_app]
 
 @app.route('/')
 def hello():
     return render_template('index.html')
 
+# [START form]
+@app.route('/form')
+def form():
+    return render_template('form.html')
+# [END form]
+
+
+# [START submitted]
+@app.route('/submitted', methods=['POST'])
+def submitted_form():
+    name = request.form['name']
+    email = request.form['email']
+    site = request.form['site_url']
+    comments = request.form['comments']
+
+    # [END submitted]
+    # [START render_template]
+    return render_template(
+        'submitted_form.html',
+        name=name,
+        email=email,
+        site=site,
+        comments=comments)
+    # [END render_template]
+
 
 @app.errorhandler(500)
 def server_error(e):
+    # Log the error and stacktrace.
     logging.exception('An error occurred during a request.')
-    return """
-    An internal error occurred: <pre>{}</pre>
-    See logs for full stacktrace.
-    """.format(e), 500
-
-
-if __name__ == '__main__':
-    # This is used when running locally. Gunicorn is used to run the
-    # application on Google App Engine. See entrypoint in app.yaml.
-    app.run(host='127.0.0.1', port=8080, debug=True)
+    return 'An internal error occurred.', 500
 # [END app]

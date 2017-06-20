@@ -1,4 +1,4 @@
-# Copyright 2015 Google Inc. All Rights Reserved.
+# Copyright 2016 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import main
+import pytest
 
 
-def test_index():
+@pytest.fixture
+def app():
+    import main
     main.app.testing = True
-    client = main.app.test_client()
+    return main.app.test_client()
 
-    r = client.get('/')
-    assert r.status_code == 200
 
-    r = client.get('/static/main.css')
+def test_form(app):
+    r = app.get('/form')
     assert r.status_code == 200
+    assert 'Submit a form' in r.data.decode('utf-8')
+
+
+def test_submitted_form(app):
+    r = app.post('/submitted', data={
+        'name': 'Inigo Montoya',
+        'email': 'inigo@example.com',
+        'site_url': 'http://example.com',
+        'comments': ''})
+    assert r.status_code == 200
+    assert 'Inigo Montoya' in r.data.decode('utf-8')

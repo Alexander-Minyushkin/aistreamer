@@ -1,7 +1,11 @@
-# Python / Flask static files sample for Google App Engine Flexible Environment
+# App Engine Standard Flask Tutorial App
 
-This demonstrates how to use [Flask](http://flask.pocoo.org/) to serve static files in your application.
+This sample shows how to use [Flask](http://flask.pocoo.org/) to handle
+requests, forms, templates, and static files on Google App Engine Standard.
 
-Flask automatically makes anything in the ``static`` directory available via the ``/static`` URL. If you plan on using a different framework, it may have different conventions for serving static files.
+Before running or deploying this application, install the dependencies using
+[pip](http://pip.readthedocs.io/en/stable/):
 
-Refer to the [top-level README](../README.md) for instructions on running and deploying.
+    pip install -t lib -r requirements.txt
+
+For more information, see the [App Engine Standard README](../../README.md)
