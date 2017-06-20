@@ -1,5 +1,13 @@
 runtime: python
 env: flex
+
+manual_scaling:
+  instances: 1
+  
+resources:
+  cpu: 0.5
+  memory_gb: 0.5
+  
 entrypoint: gunicorn -b :$PORT main:app
 
 runtime_config:
