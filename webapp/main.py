@@ -35,18 +35,28 @@ def pubsub_submit():
     topic.publish('this is the message', attr1='value1', attr2='value2')
     return 'Check Pub/Sub updates'
 
+# https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/pubsub/cloud-client/subscriber.py
+
 
 @app.route('/pubsub_pull')
 def pubsub_pull():
-    pubsub_client = pubsub.Client()
-    topic = pubsub_client.topic('small_jobs')
     subscription = topic.subscription('small_jobs')
 
     # Change return_immediately=False to block until messages are
     # received.
     results = subscription.pull(return_immediately=True)
 
-    return str(results)
+    if len(results) == 0:
+        return "No messages in pubsub"
+
+    message_id, message = results[0]
+    output = '* {}: {}, {}'.format(message_id,
+                                   message.data,
+                                   message.attributes)
+
+    subscription.acknowledge([message_id])
+
+    return output
 
 
 @app.route('/')
