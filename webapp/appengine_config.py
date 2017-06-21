@@ -12,6 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# https://stackoverflow.com/questions/41783864/importerror-no-module-named-ctypes-google-app-engine-with-bokeh-plot
+import os, sys
+
+on_appengine = os.environ.get('SERVER_SOFTWARE','').startswith('Development')
+if on_appengine and os.name == 'nt':
+    sys.platform = "Not Windows"
+    
 # [START vendor]
 from google.appengine.ext import vendor
 
