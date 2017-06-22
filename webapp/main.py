@@ -32,7 +32,9 @@ topic = client.topic('small_jobs')
 
 @app.route('/pubsub')
 def pubsub_submit():
-    topic.publish('this is the message', attr1='value1', attr2='value2')
+    topic.publish('detect_labels',
+                  path='gs://amvideotest/Late_For_Work.mp4',
+                  attr2='value2')
     return 'Check Pub/Sub updates'
 
 # https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/pubsub/cloud-client/subscriber.py
@@ -55,6 +57,24 @@ def pubsub_pull():
                                    message.attributes)
 
     subscription.acknowledge([message_id])
+
+    return output
+
+
+@app.route('/pubsub_view')
+def pubsub_view():
+    subscription = topic.subscription('small_jobs')
+
+    # Change return_immediately=False to block until messages are
+    # received.
+    results = subscription.pull(return_immediately=True)
+
+    if len(results) == 0:
+        return "No messages in pubsub"
+
+    output = ""
+    for ack_id, message in results:
+        output = output + '\n{}, {}'.format(message.data, message.attributes)
 
     return output
 

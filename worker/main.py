@@ -5,6 +5,8 @@ import json
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 
+from google.cloud import pubsub
+
 API_DISCOVERY_FILE = 'video-intelligence-service-discovery-v1beta1.json'
 OPERATIONS_DISCOVERY_FILE = 'video-intelligence-operations-discovery.json'
 
@@ -47,24 +49,39 @@ def main(gcs_uri):
         else:
             print('Operation processing ...')
     print('The video has been successfully processed.')
-    print('')
+
     lblData = response['response']['annotationResults'][0]['labelAnnotations']
-    print ('Video Annotations:')
-    for label in lblData:
-        if 'locations' not in label:
-            print ('Error in label detection: ' + label['description'])
-        else:
-            print label['description']
-            locations = label['locations']
-            for location in locations:
-                if 'segment' not in location:
-                    print 'Missing segment.'
-                else:
-                    segment = location['segment']
-                    startTime = segment.get('startTimeOffset', '0')
-                    endTime = segment.get('endTimeOffset', '0')
-                    print "  " + startTime + ", " + endTime
+
     return lblData
+
+
+def pubsub_pull(pubsub_topic_name='small_jobs'):
+    client = pubsub.Client()
+    topic = client.topic(pubsub_topic_name)
+    subscription = topic.subscription('small_jobs')
+
+    # Change return_immediately=False to block until messages are
+    # received.
+    results = subscription.pull(return_immediately=True)
+
+    if len(results) == 0:
+        return "No messages in pubsub"
+
+    message_id, message = results[0]
+    output = '* {}: {}, {}'.format(message_id,
+                                   message.data,
+                                   message.attributes)
+
+    print output
+
+    if message.data == "detect_labels":
+        if "path" in message.attributes:
+            print message.attributes["path"]
+            subscription.acknowledge([message_id])
+        else:
+            print "Message does'n contain required attribure 'path'"
+
+    return "Unrecognized message"
 
 
 if __name__ == '__main__':
