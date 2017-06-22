@@ -95,9 +95,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.type == 'label':
         res = main(args.gcs_uri)
+        with open(args.path, 'w') as outfile:
+            json.dump(res, outfile)
+    elif args.type == "pubsub_pull":
+        pubsub_pull()
     else:
         print "Error: Type is not recognized: " + args.type
-        res = ['Error: Wrong type']
-
-    with open(args.path, 'w') as outfile:
-        json.dump(res, outfile)
