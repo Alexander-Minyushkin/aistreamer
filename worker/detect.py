@@ -1,8 +1,10 @@
+import time
+
 import luigi
+from luigi.contrib.gcs import GCSTarget
+
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
-
-from google.cloud import pubsub
 
 API_DISCOVERY_FILE = 'video-intelligence-service-discovery-v1beta1.json'
 OPERATIONS_DISCOVERY_FILE = 'video-intelligence-operations-discovery.json'
@@ -21,7 +23,7 @@ class InputFileOnStorage(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.contrib.gcs.GCSTarget(self.gs_path)
+        return GCSTarget(self.gs_path)
 
 
 class DetectVideoLabels(luigi.Task):
@@ -33,6 +35,7 @@ class DetectVideoLabels(luigi.Task):
         """
         This task's dependencies:
         * :py:class:`~.InputFileOnStorage`
+        We don't read this file, just make sure it exists.
         :return: list of object (:py:class:`luigi.task.Task`)
         """
         return [InputFileOnStorage(self.gs_path_video)]
@@ -45,20 +48,56 @@ class DetectVideoLabels(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget('./DetectVideoLabels_tmp.txt')
+        return GCSTarget(self.gs_path_video + '.label.json')
 
     def run(self):
         """
-        1. count the words for each of the :py:meth:`~.InputText.output`
-        targets created by :py:class:`~.InputText`
-        2. write the count into the :py:meth:`~.WordCount.output` target
+        1. run label detection API
+        2. write the result into the :py:meth:`*.label.json` target on Storage
         """
 
-        print("DetectVideoLabels.run")
+        credentials = GoogleCredentials.get_application_default()
+
+        with open(API_DISCOVERY_FILE, 'r') as f:
+            doc = f.read()
+        video_service = discovery.build_from_document(
+            doc, credentials=credentials)
+
+        with open(OPERATIONS_DISCOVERY_FILE, 'r') as f:
+            op_doc = f.read()
+        op_service = discovery.build_from_document(
+            op_doc, credentials=credentials)
+
+        video_service_request = video_service.videos().annotate(
+            body={
+                'inputUri': self.gs_path_video,
+                'features': ['LABEL_DETECTION']
+            })
+
+        response = video_service_request.execute()
+        name = response['name']
+
+        op_service_request = op_service.operations().get(name=name)
+        response = op_service_request.execute()
+        op_start_time = str(
+            response['metadata']['annotationProgress'][0]['startTime']
+        )
+        print('Operation {} started: {}'.format(name, op_start_time))
+
+        while True:
+            response = op_service_request.execute()
+            time.sleep(30)
+            if 'done' in response and response['done'] is True:
+                break
+            else:
+                print('Operation processing ...')
+        print('The video has been successfully processed.')
+
+        lblData = response['response']['annotationResults'][0]['labelAnnotations']
 
         # output data
         f = self.output().open('w')
-        f.write(self.gs_path_video)
+        f.write(lblData)
         f.close()
 
 
