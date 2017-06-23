@@ -1,4 +1,5 @@
 import time
+import json
 
 import luigi
 from luigi.contrib.gcs import GCSTarget
@@ -97,7 +98,7 @@ class DetectVideoLabels(luigi.Task):
 
         # output data
         f = self.output().open('w')
-        f.write(lblData)
+        json.dump(lblData, f)
         f.close()
 
 
