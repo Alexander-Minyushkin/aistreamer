@@ -1,4 +1,6 @@
 google-cloud-pubsub==0.25.0
 google-api-python-client
 luigi==2.6.2
+tensorflow
 keras
+h5py
