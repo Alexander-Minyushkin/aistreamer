@@ -2,13 +2,7 @@ import argparse
 import time
 import json
 
-from googleapiclient import discovery
-from oauth2client.client import GoogleCredentials
-
-from google.cloud import pubsub
-
-API_DISCOVERY_FILE = 'video-intelligence-service-discovery-v1beta1.json'
-OPERATIONS_DISCOVERY_FILE = 'video-intelligence-operations-discovery.json'
+import luigi
 
 
 def main(gcs_uri):
