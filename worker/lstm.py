@@ -129,7 +129,6 @@ class TrainLSTM(luigi.Task):
 
         requirements = {"text": InputFileOnLocal(self.path_txt)}
 
-        print
         if self.epochs > self.epochs_step:
             requirements["pre_model"] = TrainLSTM(path_txt=self.path_txt,
                                                   epochs=self.epochs -
@@ -186,5 +185,6 @@ class TrainLSTM(luigi.Task):
 if __name__ == '__main__':
     luigi.run(['TrainLSTM',
                '--path-txt', '../data/pg/pg32040.txt',
-               '--epochs', '3',
+               '--epochs', '100',
+               '--epochs-step', '100',
                '--workers', '1', '--local-scheduler'])
