@@ -22,6 +22,15 @@ class TG_LSTM():
         self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
+        self.model = Sequential()
+        self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
+        self.model.add(Dense(len(self.chars)))
+        self.model.add(Activation('softmax'))
+
+        optimizer = RMSprop(lr=0.01)
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=optimizer)
+
     def sample(self, preds, temperature=1.0):
         # helper function to sample an index from a probability array
         preds = np.asarray(preds).astype('float64')
@@ -31,8 +40,8 @@ class TG_LSTM():
         probas = np.random.multinomial(1, preds, 1)
         return np.argmax(probas)
 
-    def train(self, txt_file_target):  # path='../data/pg/pg32040.txt'
-        text = txt_file_target.open().read().lower()
+    def train(self, txt_file_target, epochs_num):
+        text = open(txt_file_target).read().lower()
         text = "".join([x if x in self.chars else " " for x in text])
         print('corpus length:', len(text))
 
@@ -55,20 +64,9 @@ class TG_LSTM():
                 X[i, t, self.char_indices[char]] = 1
             y[i, self.char_indices[next_chars[i]]] = 1
 
-        # build the model: a single LSTM
-        print('Build model...')
-        self.model = Sequential()
-        self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
-        self.model.add(Dense(len(self.chars)))
-        self.model.add(Activation('softmax'))
-
-        optimizer = RMSprop(lr=0.01)
-        self.model.compile(loss='categorical_crossentropy',
-                           optimizer=optimizer)
-
         self.model.fit(X, y,
                        batch_size=128,
-                       epochs=30)
+                       epochs=epochs_num)
 
     def generate(self, sentence, diversity=1.0):
         generated = ''
@@ -119,7 +117,7 @@ class TrainLSTM(luigi.Task):
     # task_namespace = 'detect'
     path_txt = luigi.Parameter()
     epochs = luigi.IntParameter()
-    epochs_step = luigi.IntParameter(10)
+    epochs_step = luigi.IntParameter(1)
 
     def requires(self):
         """
@@ -128,10 +126,16 @@ class TrainLSTM(luigi.Task):
         We don't read this file, just make sure it exists.
         :return: list of object (:py:class:`luigi.task.Task`)
         """
+
+        requirements = {"text": InputFileOnLocal(self.path_txt)}
+
+        print
         if self.epochs > self.epochs_step:
-            return [TrainLSTM(path_txt=self.path_txt,
-                              epochs=self.epochs - self.epochs_step,
-                              epochs_step=self.epochs_step)]
+            requirements["pre_model"] = TrainLSTM(path_txt=self.path_txt,
+                                                  epochs=self.epochs -
+                                                  self.epochs_step,
+                                                  epochs_step=self.epochs_step)
+        return requirements
 
     def output(self):
         """
@@ -148,21 +152,39 @@ class TrainLSTM(luigi.Task):
     def run(self):
         """
         1. generate LSTM for given epoch_steps
-        2. write the result into the :py:meth:`*(epoch).model` local target 
+        2. write the result into the :py:meth:`*(epoch).model` local target
         """
         lstm = TG_LSTM()
 
+        if "pre_model" in self.input():
+            lstm.load(self.input()["pre_model"].fn)
 
-#lstm = TG_LSTM()
+        lstm.train(txt_file_target=self.input()["text"].fn,
+                   epochs_num=min(self.epochs, self.epochs_step))
+        
+        print(">>>>>>>>>>>>")
+        print(lstm.generate('immunity '*2))
+        print(">>>>>>>>>>>>")
+        
+        lstm.save(self.output().fn)
+
+
+# lstm = TG_LSTM()
 # lstm.train()
 # print(lstm.generate('immunity'))
 
 # lstm.save()
 
-#lstm2 = TG_LSTM()
+# lstm2 = TG_LSTM()
 # lstm2.load()
 # print(lstm2.generate('immunity'))
 
-#print(lstm2.generate('immunity ' * 2))
+# print(lstm2.generate('immunity ' * 2))
 
-#print(lstm2.generate('immunity ' * 4))
+# print(lstm2.generate('immunity ' * 4))
+
+if __name__ == '__main__':
+    luigi.run(['TrainLSTM',
+               '--path-txt', '../data/pg/pg32040.txt',
+               '--epochs', '3',
+               '--workers', '1', '--local-scheduler'])
