@@ -1,0 +1,6 @@
+
+
+sudo apt-get -y install python-pip
+git clone https://github.com/Alexander-Minyushkin/aistreamer.git
+cd aistreamer/worker/
+pip install -r requirements.txt
