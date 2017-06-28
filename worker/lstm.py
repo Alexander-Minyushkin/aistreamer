@@ -26,7 +26,10 @@ class TG_LSTM():
         self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
         self.model.add(Dense(len(self.chars)))
         self.model.add(Activation('softmax'))
-
+        
+        self.compile()
+        
+    def compile(self):
         optimizer = RMSprop(lr=0.01)
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=optimizer)
@@ -90,10 +93,11 @@ class TG_LSTM():
         return generated
 
     def save(self, path='../data/models/lstm.model'):
-        self.model.save(path)
+        self.model.save(path, overwrite=True)
 
     def load(self, path='../data/models/lstm.model'):
-        self.model = load_model(path)
+        self.model = load_model(path, compile=False)
+        self.compile()
 
 
 class InputFileOnLocal(luigi.ExternalTask):
@@ -186,5 +190,5 @@ if __name__ == '__main__':
     luigi.run(['TrainLSTM',
                '--path-txt', '../data/pg/pg32040.txt',
                '--epochs', '100',
-               '--epochs-step', '100',
+               '--epochs-step', '2',
                '--workers', '1', '--local-scheduler'])
