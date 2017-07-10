@@ -41,6 +41,7 @@ class DummyTextGenerator(TextGenerator):
         return word_to_use
 
 
-tg = DummyTextGenerator()
+if __name__ == '__main__':
+    tg = DummyTextGenerator()
 
-print(tg.get_text("", "Ha-Ha!"))
+    print(tg.get_text("", "Ha-Ha!"))
