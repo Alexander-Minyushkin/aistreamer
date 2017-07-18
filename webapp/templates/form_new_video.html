@@ -1,0 +1,22 @@
+{% extends "boilerplate.html" %}
+{% block body %}
+    <div id="container">
+      <div class="pagetitle">
+        <h2>Check video before submit</h2>
+      </div>
+
+      <iframe src="https://www.youtube.com/embed/{{VIDEOID}}" width="400" height="300" frameborder="0" allowfullscreen></iframe>
+
+
+      <div id="main">
+        <form method="post">
+          <label for="site_url">Youtube URL:</label>
+          <input type="url" name="site_url" value="{{site_url}}"><br />
+          <label for="comments">Comments:</label>
+          <textarea name="comments" >{{comments}}</textarea><br />
+          <button type="submit" formaction="{{ url_for('new_video_check') }}">Check</button>
+          <button type="submit" formaction="/action_two">Submit</button>
+        </form>
+      </div>
+    </div>
+{% endblock %}

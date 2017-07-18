@@ -1,2 +1,3 @@
 Flask==0.12.1
-google-cloud-pubsub==0.25.0
+pytube
+google-cloud-pubsub

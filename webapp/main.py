@@ -18,6 +18,7 @@ import logging
 # [START imports]
 from flask import Flask, render_template, request
 from google.cloud import pubsub
+from pytube import YouTube
 # [END imports]
 
 # [START create_app]
@@ -84,6 +85,36 @@ def hello():
     return render_template('index.html')
 
 # [START form]
+
+
+@app.route('/new_video')
+def new_video():
+    return render_template('form_new_video.html')
+
+
+@app.route('/new_video_check', methods=['POST'])
+def new_video_check():
+    site_url = request.form['site_url']
+    comments = request.form['comments']
+
+    try:
+        from urllib.parse import urlparse
+    except ImportError:
+        from urlparse import urlparse
+
+    o = urlparse(site_url)
+    VIDEOID = o.query.split('=')[1]
+
+    yt = YouTube(site_url)
+
+    # [END submitted]
+    # [START render_template]
+    return render_template(
+        'form_new_video.html',
+        site_url=site_url,
+        comments=comments,
+        filename=yt.filename,
+        VIDEOID=VIDEOID)
 
 
 @app.route('/form')
