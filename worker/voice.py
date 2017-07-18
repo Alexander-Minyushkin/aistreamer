@@ -97,7 +97,8 @@ class GenVoiceFile(luigi.Task):
 
         curr_time_mksec = fullTrack.duration_seconds * 1000000
 
-        while (curr_time_mksec < max(labels['end'])):
+        video_duration_mksec = max(labels['end'])
+        while (curr_time_mksec < video_duration_mksec):
             observedBefore = set(labels[labels['start'] <
                                         curr_time_mksec]['Label'])
             candidates = list(observedBefore - usedBefore)
@@ -109,24 +110,25 @@ class GenVoiceFile(luigi.Task):
 
             seedWordsToGen = seedWords.lower()
             print(str(curr_time_mksec) + ' ' + seedWordsToGen)
-            wordsToSay = generator.get_text("TODo: full text so far",
+            wordsToSay = generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
             print(wordsToSay)
 
             segment = self.textToAudioSegment(wordsToSay)
 
             print(segment.duration_seconds)
+            print(fullTrack.duration_seconds)
             print("---------")
+
+            if (segment.duration_seconds + fullTrack.duration_seconds) * 1000000 > video_duration_mksec:
+                break
             fullTrack = fullTrack + segment
 
             # print seedWords in usedBefore
 
             usedBefore = usedBefore.union(set([seedWords]))
 
-            if segment.duration_seconds < 1.:
-                curr_time_mksec = curr_time_mksec + 1000000
-            else:
-                curr_time_mksec = fullTrack.duration_seconds * 1000000
+            curr_time_mksec = fullTrack.duration_seconds * 1000000
 
         fullTrack.export("../tmp/result.mp3", format="mp3")
 
