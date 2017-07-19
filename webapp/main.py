@@ -87,6 +87,15 @@ def hello():
 # [START form]
 
 
+@app.route('/job_list', methods=['GET'])
+def job_list():
+    num = request.args.get('num')
+    if not num:
+        num = 10
+    num = int(num)
+    return "get num: " + str(num)
+
+
 @app.route('/new_video')
 def new_video():
     return render_template('form_new_video.html')
@@ -115,6 +124,43 @@ def new_video_check():
         comments=comments,
         filename=yt.filename,
         VIDEOID=VIDEOID)
+
+
+@app.route('/new_video_submit', methods=['POST'])
+def new_video_submit():
+    site_url = request.form['site_url']
+    comments = request.form['comments']
+
+    try:
+        from urllib.parse import urlparse
+    except ImportError:
+        from urlparse import urlparse
+
+    o = urlparse(site_url)
+    VIDEOID = o.query.split('=')[1]
+
+    yt = YouTube(site_url)
+
+    import task
+
+    task_type = "video_processing"
+    task_key = task.add_task(task.get_client(),
+                             task_type,
+                             site_url,
+                             comments)
+
+    submitted = "Successfully submitted "
+
+    # [END submitted]
+    # [START render_template]
+    return render_template(
+        'form_new_video.html',
+        site_url=site_url,
+        comments=comments,
+        filename=yt.filename,
+        VIDEOID=VIDEOID,
+        submitted=submitted,
+        task_type=task_type)
 
 
 @app.route('/form')

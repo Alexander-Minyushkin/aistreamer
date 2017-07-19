@@ -15,7 +15,7 @@
           <label for="comments">Comments:</label>
           <textarea name="comments" >{{comments}}</textarea><br />
           <button type="submit" formaction="{{ url_for('new_video_check') }}">Check</button>
-          <button type="submit" formaction="/action_two">Submit</button>
+          <button type="submit" formaction="{{ url_for('new_video_submit') }}">Submit</button>
         </form>
       </div>
     </div>
