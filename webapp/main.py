@@ -28,7 +28,10 @@ app = Flask(__name__)
 # https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/pubsub
 client = pubsub.Client()
 topic = client.topic('small_jobs')
-# topic.create()
+if not topic.exists():
+    topic.create()
+
+subscription = topic.subscription('small_jobs_monitoring')
 
 
 @app.route('/pubsub')
@@ -43,7 +46,6 @@ def pubsub_submit():
 
 @app.route('/pubsub_pull')
 def pubsub_pull():
-    subscription = topic.subscription('small_jobs')
 
     # Change return_immediately=False to block until messages are
     # received.
@@ -64,8 +66,6 @@ def pubsub_pull():
 
 @app.route('/pubsub_view')
 def pubsub_view():
-    subscription = topic.subscription('small_jobs')
-
     # Change return_immediately=False to block until messages are
     # received.
     results = subscription.pull(return_immediately=True)
@@ -148,6 +148,10 @@ def new_video_submit():
                              task_type,
                              site_url,
                              comments)
+
+    topic.publish('detect_labels',
+                  task_key=task_key.urlsafe(),
+                  site_url=site_url)
 
     submitted = "Successfully submitted "
 
