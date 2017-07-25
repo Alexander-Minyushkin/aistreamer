@@ -70,14 +70,9 @@ def pubsub_view():
     # received.
     results = subscription.pull(return_immediately=True)
 
-    if len(results) == 0:
-        return "No messages in pubsub"
-
-    output = ""
-    for ack_id, message in results:
-        output = output + '\n{}, {}'.format(message.data, message.attributes)
-
-    return output
+    return render_template('pubsub_view.html',
+                           results=results,
+                           res_len=len(results))
 
 
 @app.route('/')
@@ -141,16 +136,15 @@ def new_video_submit():
 
     yt = YouTube(site_url)
 
-    import task
+    from task import Task
 
-    task_type = "video_processing"
-    task_key = task.add_task(task.get_client(),
-                             task_type,
-                             site_url,
-                             comments)
+    task_type = "video_full_cycle"
+    task_key = Task(task_type=task_type,
+                    video_address=site_url,
+                    comment=comments).put().urlsafe()
 
-    topic.publish('detect_labels',
-                  task_key=task_key.urlsafe(),
+    topic.publish(task_type,
+                  task_key=task_key,
                   site_url=site_url)
 
     submitted = "Successfully submitted "

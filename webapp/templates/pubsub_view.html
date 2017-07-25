@@ -1,0 +1,15 @@
+{% extends "boilerplate_light.html" %}
+{% block body %}
+    <div id="container">
+      <div class="pagetitle">
+        <h3>Pubsub: {{ res_len }}</h3>
+      </div>
+      <div id="main">
+          {% for ack_id, message in results %}
+            <li>{{ message.data }}: {{ message.attributes }}
+          {% else %}
+            <li><em>Empty</em>
+        {% endfor %}
+      </div>
+    </div>
+{% endblock %}
