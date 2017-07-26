@@ -18,5 +18,9 @@
           <button type="submit" formaction="{{ url_for('new_video_submit') }}">Submit</button>
         </form>
       </div>
+
+      <iframe src="{{url_for('pubsub_view')}}" width="400" height="300" frameborder="0" ></iframe>
+      <iframe src="{{url_for('task_view')}}" width="400" height="300" frameborder="0" ></iframe>
+      
     </div>
 {% endblock %}

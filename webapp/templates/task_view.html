@@ -1,0 +1,15 @@
+{% extends "boilerplate_light.html" %}
+{% block body %}
+    <div id="container">
+      <div class="pagetitle">
+        <h3>Tasks</h3>
+      </div>
+      <div id="main">
+          {% for task_type, video_address, comment in results %}
+            <li>({{ task_type }}) {{video_address}}  {{comment}}
+          {% else %}
+            <li><em>Empty</em>
+          {% endfor %}
+      </div>
+    </div>
+{% endblock %}

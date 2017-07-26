@@ -75,6 +75,18 @@ def pubsub_view():
                            res_len=len(results))
 
 
+@app.route('/task_view')
+def task_view():
+
+    from task import Task
+    results = [(t.task_type, t.video_address, t.comment)
+               for t in Task.latest()]
+
+    return render_template('task_view.html',
+                           results=results,
+                           res_len=len(results))
+
+
 @app.route('/')
 def hello():
     return render_template('index.html')
