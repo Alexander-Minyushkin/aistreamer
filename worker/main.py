@@ -1,58 +1,14 @@
 import argparse
-import time
 import json
+from google.cloud import pubsub
 
 import luigi
-
-
-def main(gcs_uri):
-
-    credentials = GoogleCredentials.get_application_default()
-
-    with open(API_DISCOVERY_FILE, 'r') as f:
-        doc = f.read()
-    video_service = discovery.build_from_document(
-        doc, credentials=credentials)
-
-    with open(OPERATIONS_DISCOVERY_FILE, 'r') as f:
-        op_doc = f.read()
-    op_service = discovery.build_from_document(
-        op_doc, credentials=credentials)
-
-    video_service_request = video_service.videos().annotate(
-        body={
-            'inputUri': gcs_uri,
-            'features': ['LABEL_DETECTION']
-        })
-
-    response = video_service_request.execute()
-    name = response['name']
-
-    op_service_request = op_service.operations().get(name=name)
-    response = op_service_request.execute()
-    op_start_time = str(
-        response['metadata']['annotationProgress'][0]['startTime']
-    )
-    print('Operation {} started: {}'.format(name, op_start_time))
-
-    while True:
-        response = op_service_request.execute()
-        time.sleep(30)
-        if 'done' in response and response['done'] is True:
-            break
-        else:
-            print('Operation processing ...')
-    print('The video has been successfully processed.')
-
-    lblData = response['response']['annotationResults'][0]['labelAnnotations']
-
-    return lblData
 
 
 def pubsub_pull(pubsub_topic_name='small_jobs'):
     client = pubsub.Client()
     topic = client.topic(pubsub_topic_name)
-    subscription = topic.subscription('small_jobs')
+    subscription = topic.subscription('small_jobs_worker')
 
     # Change return_immediately=False to block until messages are
     # received.
@@ -72,8 +28,18 @@ def pubsub_pull(pubsub_topic_name='small_jobs'):
         if "path" in message.attributes:
             print message.attributes["path"]
             subscription.acknowledge([message_id])
+            return message.data
         else:
             print "Message does'n contain required attribure 'path'"
+    elif message.data == "video_full_cycle":
+        if "site_url" not in message.attributes:
+            print "Message does'n contain required attribure 'site_url'"
+        elif "task_key" not in message.attributes:
+            print "Message does'n contain required attribure 'task_key'"
+        else:
+            print message.attributes["site_url"]
+            subscription.acknowledge([message_id])
+            return message.data
 
     return "Unrecognized message"
 
@@ -81,17 +47,14 @@ def pubsub_pull(pubsub_topic_name='small_jobs'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'type', help='Type of video analysis: label, face or shot')
-    parser.add_argument(
-        'gcs_uri', help='The Google Cloud Storage URI of the video.')
-    parser.add_argument(
-        'path', help='File to store result.')
+        'type', help='Type action: pubsub_pull')
+    # parser.add_argument(
+    #    'gcs_uri', help='The Google Cloud Storage URI of the video.')
+    # parser.add_argument(
+    #    'path', help='File to store result.')
     args = parser.parse_args()
-    if args.type == 'label':
-        res = main(args.gcs_uri)
-        with open(args.path, 'w') as outfile:
-            json.dump(res, outfile)
-    elif args.type == "pubsub_pull":
+
+    if args.type == "pubsub_pull":
         pubsub_pull()
     else:
         print "Error: Type is not recognized: " + args.type
