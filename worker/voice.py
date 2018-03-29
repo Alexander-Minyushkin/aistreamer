@@ -26,11 +26,74 @@ import pandas as pd
 from gtts import gTTS
 from pydub import AudioSegment
 
+class TextToSpeech():
+
+    localTmpFolder = "../tmp/"
+
+    def convertTextToSegment(self, wordsToSay):
+        """
+        Returns pydub.AudioSegment generated from given text .
+        """
+        raise NotImplementedError
+
+class GTTSTextToSpeech(TextToSpeech):
+    """
+    TextToSpeech implementation using GTTS
+    """
+
+    def convertTextToSegment(self, wordsToSay):
+        tts = gTTS(text=wordsToSay, lang='en')
+
+        segmentFileName = self.localTmpFolder + "tmp.mp3"
+        tts.save(segmentFileName)  # TODO move to temporary file
+
+        segment = AudioSegment.from_mp3(segmentFileName)
+
+        return segment       
+
+class GCPTextToSpeech(TextToSpeech):
+    """
+    TextToSpeech implementation using GTTS
+    """
+
+    def convertTextToSegment(self, wordsToSay):        
+        """
+        Source taken here https://cloud.google.com/text-to-speech/docs/create-audio#text-to-speech-text-python
+        """
+        segmentFileName = self.localTmpFolder + "tmp.mp3"
+        
+        """Synthesizes speech from the input string of text."""
+        from google.cloud import texttospeech
+        client = texttospeech.TextToSpeechClient()
+
+        input_text = texttospeech.types.SynthesisInput(text=wordsToSay)
+
+        # Note: the voice can also be specified by name.
+        # Names of voices can be retrieved with client.list_voices().
+        voice = texttospeech.types.VoiceSelectionParams(
+            language_code='en-US',
+            ssml_gender=texttospeech.enums.SsmlVoiceGender.FEMALE)
+
+        audio_config = texttospeech.types.AudioConfig(
+            audio_encoding=texttospeech.enums.AudioEncoding.MP3)
+
+        response = client.synthesize_speech(input_text, voice, audio_config)
+
+        # The response's audio_content is binary.
+        with open(segmentFileName, 'wb') as out:
+            out.write(response.audio_content)
+
+        segment = AudioSegment.from_mp3(segmentFileName)
+
+        return segment             
 
 class GenVoiceFile(luigi.Task):
 
     task_namespace = 'detect'
     gs_path_video = luigi.Parameter()
+
+    generator = DummyTextGenerator()
+    tts = GCPTextToSpeech() # GTTSTextToSpeech()
 
     def requires(self):
         """
@@ -71,14 +134,7 @@ class GenVoiceFile(luigi.Task):
 
     def textToAudioSegment(self, wordsToSay):
         # Convert text to sound
-        tts = gTTS(text=wordsToSay, lang='en')
-
-        segmentFileName = "../tmp/tmp.mp3"
-        tts.save(segmentFileName)  # TODO move to temporary file
-
-        segment = AudioSegment.from_mp3(segmentFileName)
-
-        return segment
+        return self.tts.convertTextToSegment(wordsToSay)
 
     def run(self):
         print(">>>> Run GenVoiceFile")
@@ -89,7 +145,7 @@ class GenVoiceFile(luigi.Task):
 
         print(labels)
 
-        generator = DummyTextGenerator()
+        
 
         usedBefore = set()
 
@@ -110,7 +166,7 @@ class GenVoiceFile(luigi.Task):
 
             seedWordsToGen = seedWords.lower()
             print(str(curr_time_mksec) + ' ' + seedWordsToGen)
-            wordsToSay = generator.get_text("TODO: full text so far",
+            wordsToSay = self.generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
             print(wordsToSay)
 
