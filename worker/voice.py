@@ -16,6 +16,8 @@ limitations under the License.
 """
 
 from aistreamer import DummyTextGenerator
+from textgenMarkov import MarkovTextGenerator
+
 from detect import DetectVideoLabels
 
 import luigi
@@ -53,7 +55,7 @@ class GTTSTextToSpeech(TextToSpeech):
 
 class GCPTextToSpeech(TextToSpeech):
     """
-    TextToSpeech implementation using GTTS
+    TextToSpeech implementation using GCP Text-to-speech
     """
 
     def convertTextToSegment(self, wordsToSay):        
@@ -88,9 +90,10 @@ class GCPTextToSpeech(TextToSpeech):
         return segment             
 
 class GenVoiceFile(luigi.Task):
-
+    
     task_namespace = 'detect'
     gs_path_video = luigi.Parameter()
+    text_generator = luigi.Parameter()
 
     generator = DummyTextGenerator()
     tts = GCPTextToSpeech() # GTTSTextToSpeech()
@@ -145,7 +148,8 @@ class GenVoiceFile(luigi.Task):
 
         print(labels)
 
-        
+        if self.text_generator == 'markov':
+            self.generator = MarkovTextGenerator('combined.db')            
 
         usedBefore = set()
 
@@ -187,9 +191,11 @@ class GenVoiceFile(luigi.Task):
             curr_time_mksec = fullTrack.duration_seconds * 1000000
 
         fullTrack.export("../tmp/result.mp3", format="mp3")
+    
 
 
 if __name__ == '__main__':
     luigi.run(['detect.GenVoiceFile',
                '--gs-path-video', 'gs://amvideotest/Late_For_Work.mp4',
+               '--text-generator','markov',
                '--workers', '1', '--local-scheduler'])
