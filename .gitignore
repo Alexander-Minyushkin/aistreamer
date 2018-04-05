@@ -14,6 +14,7 @@ __pycache__/
 *.db
 
 # Distribution / packaging
+src/
 markov-text/
 tmp/
 data/video/
