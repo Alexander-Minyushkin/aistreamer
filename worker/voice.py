@@ -21,7 +21,7 @@ from textgenMarkov import MarkovTextGenerator
 from detect import DetectVideoLabels
 
 import luigi
-from luigi.contrib.gcs import GCSTarget, AtomicGCSFile
+from luigi.contrib.gcs import GCSTarget, AtomicGCSFile, GCSClient
 
 import json
 import pandas as pd
@@ -97,6 +97,7 @@ class GenVoiceFile(luigi.Task):
 
     generator = DummyTextGenerator()
     tts = GCPTextToSpeech() # GTTSTextToSpeech()
+    temp_result_file = "../tmp/result.mp3"
 
     def requires(self):
         """
@@ -115,6 +116,7 @@ class GenVoiceFile(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
+
         return GCSTarget(self.gs_path_video + '.voice.mp3')
 
     def json_labels_to_pd(self, d):
@@ -190,7 +192,9 @@ class GenVoiceFile(luigi.Task):
 
             curr_time_mksec = fullTrack.duration_seconds * 1000000
 
-        fullTrack.export("../tmp/result.mp3", format="mp3")
+        fullTrack.export(self.temp_result_file, format="mp3")
+
+        GCSClient().put(self.temp_result_file, self.output().path)   
     
 
 
