@@ -24,7 +24,7 @@ class InputFileOnStorage(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget(self.gs_path)
+        return GCSTarget(self.gs_path)
 
 
 class DetectVideoLabels(luigi.Task):
