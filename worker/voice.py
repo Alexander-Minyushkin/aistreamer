@@ -23,6 +23,7 @@ from detect import DetectVideoLabels
 import luigi
 from luigi.contrib.gcs import GCSTarget, AtomicGCSFile, GCSClient
 
+import random
 import json
 import pandas as pd
 from gtts import gTTS
@@ -155,7 +156,7 @@ class GenVoiceFile(luigi.Task):
 
         usedBefore = set()
 
-        fullTrack = self.textToAudioSegment("Test")
+        fullTrack = self.textToAudioSegment("")
 
         curr_time_mksec = fullTrack.duration_seconds * 1000000
 
@@ -169,6 +170,10 @@ class GenVoiceFile(luigi.Task):
 
             if len(candidates) > 0:
                 seedWords = candidates[0]
+            elif len(usedBefore)>0:
+                # Need to do this if list of detected words is too small
+                seedWords = random.sample(usedBefore, 1)[0]
+                print("RANDOM seed word!")
 
             seedWordsToGen = seedWords.lower()
             print(str(curr_time_mksec) + ' ' + seedWordsToGen)
@@ -200,6 +205,6 @@ class GenVoiceFile(luigi.Task):
 
 if __name__ == '__main__':
     luigi.run(['detect.GenVoiceFile',
-               '--gs-path-video', 'gs://amvideotest/Late_For_Work.mp4',
+               '--gs-path-video',  'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefront1.mp4', #
                '--text-generator','markov',
                '--workers', '1', '--local-scheduler'])
