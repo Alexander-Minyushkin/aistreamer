@@ -13,11 +13,13 @@
 # limitations under the License.
 
 # [START app]
-import logging
 
 # [START imports]
+import logging
+import functools
+
 from flask import Flask, render_template, request
-from google.cloud import pubsub
+
 from pytube import YouTube
 # [END imports]
 
@@ -25,61 +27,12 @@ from pytube import YouTube
 app = Flask(__name__)
 # [END create_app]
 
-# https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/pubsub
-client = pubsub.Client()
-topic = client.topic('small_jobs')
-if not topic.exists():
-    topic.create()
-
-subscription = topic.subscription('small_jobs_monitoring')
-
-
-@app.route('/pubsub')
-def pubsub_submit():
-    topic.publish('detect_labels',
-                  path='gs://amvideotest/Late_For_Work.mp4',
-                  attr2='value2')
-    return 'Check Pub/Sub updates'
-
-# https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/pubsub/cloud-client/subscriber.py
-
-
-@app.route('/pubsub_pull')
-def pubsub_pull():
-
-    # Change return_immediately=False to block until messages are
-    # received.
-    results = subscription.pull(return_immediately=True)
-
-    if len(results) == 0:
-        return "No messages in pubsub"
-
-    message_id, message = results[0]
-    output = '* {}: {}, {}'.format(message_id,
-                                   message.data,
-                                   message.attributes)
-
-    subscription.acknowledge([message_id])
-
-    return output
-
-
-@app.route('/pubsub_view')
-def pubsub_view():
-    # Change return_immediately=False to block until messages are
-    # received.
-    results = subscription.pull(return_immediately=True)
-
-    return render_template('pubsub_view.html',
-                           results=results,
-                           res_len=len(results))
-
 
 @app.route('/task_view')
 def task_view():
 
     from task import Task
-    results = [(t.task_type, t.video_address, t.comment)
+    results = [(t.task_type, t.video_address, t.comment, t.created, t.pulled, t.is_completed)
                for t in Task.latest()]
 
     return render_template('task_view.html',
@@ -119,9 +72,9 @@ def new_video_check():
         from urlparse import urlparse
 
     o = urlparse(site_url)
-    VIDEOID = o.query.split('=')[1]
-
+    
     yt = YouTube(site_url)
+    VIDEOID = yt.video_id
 
     # [END submitted]
     # [START render_template]
@@ -129,7 +82,6 @@ def new_video_check():
         'form_new_video.html',
         site_url=site_url,
         comments=comments,
-        filename=yt.filename,
         VIDEOID=VIDEOID)
 
 
@@ -143,21 +95,22 @@ def new_video_submit():
     except ImportError:
         from urlparse import urlparse
 
-    o = urlparse(site_url)
-    VIDEOID = o.query.split('=')[1]
+    o = urlparse(site_url)    
 
     yt = YouTube(site_url)
+    VIDEOID = yt.video_id
 
     from task import Task
 
     task_type = "video_full_cycle"
     task_key = Task(task_type=task_type,
                     video_address=site_url,
+                    is_completed = False,
                     comment=comments).put().urlsafe()
 
-    topic.publish(task_type,
-                  task_key=task_key,
-                  site_url=site_url)
+    #topic.publish(task_type,
+    #              task_key=task_key,
+    #              site_url=site_url)
 
     submitted = "Successfully submitted "
 
@@ -167,7 +120,6 @@ def new_video_submit():
         'form_new_video.html',
         site_url=site_url,
         comments=comments,
-        filename=yt.filename,
         VIDEOID=VIDEOID,
         submitted=submitted,
         task_type=task_type)
