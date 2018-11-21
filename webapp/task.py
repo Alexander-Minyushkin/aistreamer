@@ -1,6 +1,7 @@
 
 
 from google.appengine.ext import ndb
+import time
 
 
 class Task(ndb.Model):
@@ -16,3 +17,7 @@ class Task(ndb.Model):
     @classmethod
     def latest(cls):
         return cls.query().order(-cls.created).fetch(10)
+
+    @classmethod
+    def pull(cls, timeout_sec=10*60):
+        return cls.query().order(cls.created).filter(Task.).fetch(1)

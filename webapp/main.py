@@ -28,9 +28,15 @@ app = Flask(__name__)
 # [END create_app]
 
 
+@app.route('/')
+def hello():
+    return render_template('index.html')
+
 @app.route('/task_view')
 def task_view():
-
+    """
+    Show all tasks
+    """
     from task import Task
     results = [(t.task_type, t.video_address, t.comment, t.created, t.pulled, t.is_completed)
                for t in Task.latest()]
@@ -39,10 +45,19 @@ def task_view():
                            results=results,
                            res_len=len(results))
 
+@app.route('/task_pull')
+def task_view():
+    """
+    Show all tasks
+    """
+    from task import Task
+    results = [(t.task_type, t.video_address, t.comment, t.created, t.pulled, t.is_completed)
+               for t in Task.latest()]
 
-@app.route('/')
-def hello():
-    return render_template('index.html')
+    return render_template('task_view.html',
+                           results=results,
+                           res_len=len(results))
+
 
 # [START form]
 
