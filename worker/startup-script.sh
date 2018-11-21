@@ -4,7 +4,7 @@ cd worker/
 sudo apt-get update
 sudo apt-get install python-pip
 sudo pip install --upgrade pip
-sudo pip install google-cloud
+sudo pip install google-cloud<0.34.0
 sudo pip install luigi
 sudo pip install -r requirements.txt
 python main.py pubsub_pull
