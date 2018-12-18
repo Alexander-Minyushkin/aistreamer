@@ -13,13 +13,13 @@ sed '/./!d' | sed '/.\{150\}/d' | sed '/^\s*$/d' > tmp/combined.txt
 
 
 
-cat data/pg/Sheckley_Robert.txt | 
- iconv -c -f utf-8 -t ascii | iconv -f ascii -t utf-8 |  tr '[:upper:]' '[:lower:]' |  
- tr -d '[]()' | tr '\r\n_' '   ' | tr -s '.' |
- sed 's/\./ .\n/g' | sed 's/!/ !\n/g' | sed 's/?/ ?\n/g' |
- sed 's/[,;\"-]/ /g' | 
- tr -s ' ' | 
- sed 's/\* \* \* \* \* /\n/g' | 
- sed 's/^ //g' > ./Cloud-ML-Engine/Sheckley_Robert/data/raw.txt
+#cat data/pg/Sheckley_Robert.txt | 
+# iconv -c -f utf-8 -t ascii | iconv -f ascii -t utf-8 |  tr '[:upper:]' '[:lower:]' |  
+# tr -d '[]()' | tr '\r\n_' '   ' | tr -s '.' |
+# sed 's/\./ .\n/g' | sed 's/!/ !\n/g' | sed 's/?/ ?\n/g' |
+# sed 's/[,;\"-]/ /g' | 
+# tr -s ' ' | 
+# sed 's/\* \* \* \* \* /\n/g' | 
+# sed 's/^ //g' > ./Cloud-ML-Engine/Sheckley_Robert/data/raw.txt
 
 

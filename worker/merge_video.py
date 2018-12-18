@@ -58,15 +58,18 @@ class MergeVideoAndAudio(luigi.Task):
         tmp_audio_file = GCSClient().download(self.requires()[0].output().path)
 
         #'ffmpeg -i Late_For_Work.mp4 -i Late_For_Work.mp4.voice.mp3 -c:v copy -map 0:v:0 -map 1:a:0 result.mp4'
-        cmd = ['ffmpeg', '-y', '-i', tmp_video_file.name, '-i', tmp_audio_file.name, '-c:v', 'copy', '-map', '0:v:0', '-map', '1:a:0', self.temp_result_file]
+        cmd = ['ffmpeg', '-y', '-i', tmp_video_file.name, 
+        '-i', tmp_audio_file.name, '-c:v', 'copy', 
+        '-map', '0:v:0', '-map', '1:a:0', 
+        '-strict', '-2', '-y',
+        self.temp_result_file]
         print(cmd)
         subprocess.check_call(cmd)
 
+        GCSClient().put(self.temp_result_file, self.output().path)         
+        
         tmp_video_file.close()
         tmp_audio_file.close()
-
-        GCSClient().put(self.temp_result_file, self.output().path)         
-
 
 if __name__ == '__main__':
     luigi.run(['detect.MergeVideoAndAudio',

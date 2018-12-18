@@ -5,13 +5,13 @@ IFS=$'\n\t'
 
 
 # pubsub configuration on GCP
-gcloud alpha pubsub topics create small_jobs
-gcloud alpha pubsub subscriptions create small_jobs_monitoring --topic small_jobs  --ack-deadline=60
-gcloud alpha pubsub subscriptions create small_jobs_worker --topic small_jobs  --ack-deadline=60
+#gcloud alpha pubsub topics create small_jobs
+#gcloud alpha pubsub subscriptions create small_jobs_monitoring --topic small_jobs  --ack-deadline=60
+#gcloud alpha pubsub subscriptions create small_jobs_worker --topic small_jobs  --ack-deadline=60
 
 
 
-
+mkdir tmp
 # Markov process tool for text generation
 git clone https://github.com/Alexander-Minyushkin/markov-text.git
 export PYTHONPATH="markov-text"
