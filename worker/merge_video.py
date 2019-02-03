@@ -14,14 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 """
-
-from aistreamer import DummyTextGenerator
-from textgenMarkov import MarkovTextGenerator
-
+import argparse
 from voice import GenVoiceFile
 
 import luigi
-from luigi.contrib.gcs import GCSTarget, AtomicGCSFile, GCSClient
+from luigi.contrib.gcs import GCSTarget, GCSClient
 import subprocess
 
 class MergeVideoAndAudio(luigi.Task):
@@ -72,7 +69,13 @@ class MergeVideoAndAudio(luigi.Task):
         tmp_audio_file.close()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+    description=__doc__,
+    formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('path', help='GCS file path (gs://...)')
+    args = parser.parse_args()
+    
     luigi.run(['detect.MergeVideoAndAudio',
-               '--gs-path-video',  'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefield1.mp4', #
+               '--gs-path-video',  args.path, #'gs://amvideotest/Welcome_to_Adam_Does_Movies.mp4', # 'gs://amvideotest/battlefield1.mp4', #
                '--text-generator','markov',
                '--workers', '1', '--local-scheduler'])

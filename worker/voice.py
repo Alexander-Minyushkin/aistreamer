@@ -21,10 +21,9 @@ from textgenMarkov import MarkovTextGenerator
 from detect import DetectVideoLabels
 
 import luigi
-from luigi.contrib.gcs import GCSTarget, AtomicGCSFile, GCSClient
+from luigi.contrib.gcs import GCSTarget, GCSClient
 
 import random
-import json
 import pandas as pd
 from gtts import gTTS
 from pydub import AudioSegment
@@ -125,6 +124,23 @@ class GenVoiceFile(luigi.Task):
         headers = ['Label', 'confidence', 'start', 'end']
 
         def gen_from_dict(d):
+            for node in d['annotationResults'][0]['shotLabelAnnotations']:
+                description = node['entity']['description']
+                for loc in node['segments']:
+                    yield [
+                        description, 
+                        loc['confidence'], 
+                        int(float(loc['segment'].get('startTimeOffset', '0').replace('s',''))* 1000000),
+                        int(float(loc['segment'].get('endTimeOffset',   '-1').replace('s',''))* 1000000)
+                        ] 
+
+        return pd.DataFrame(gen_from_dict(d), columns=headers)
+    
+    def json_labels_to_pd_old(self, d):
+
+        headers = ['Label', 'confidence', 'start', 'end']
+
+        def gen_from_dict(d):
             for node in d:
                 description = node['description']
                 for loc in node['locations']:
@@ -136,7 +152,7 @@ class GenVoiceFile(luigi.Task):
                         int(loc['segment'].get('endTimeOffset',   -1))
                     ]
 
-        return pd.DataFrame(gen_from_dict(d), columns=headers)
+        return pd.DataFrame(gen_from_dict(d), columns=headers)    
 
     def textToAudioSegment(self, wordsToSay):
         # Convert text to sound
@@ -145,10 +161,13 @@ class GenVoiceFile(luigi.Task):
     def run(self):
         print(">>>> Run GenVoiceFile")
 
-        with self.input()[0].open() as json_data:
-            d = json.load(json_data)
-            labels = self.json_labels_to_pd(d)
+        #with self.input()[0].open() as json_data:
+        #    d = json.load(json_data)
+        #    labels = self.json_labels_to_pd(d)
 
+        labels = pd.read_csv(self.input()[0].open(), 
+                             header=None,
+                             names = ['Label', 'category', 'start', 'end'])
         print(labels)
 
         if self.text_generator == 'markov':
@@ -160,9 +179,9 @@ class GenVoiceFile(luigi.Task):
 
         curr_time_mksec = fullTrack.duration_seconds * 1000000
 
-        video_duration_mksec = max(labels['end'])
+        video_duration_mksec = max(labels['end']) * 1000000
         while (curr_time_mksec < video_duration_mksec):
-            observedBefore = set(labels[labels['start'] <
+            observedBefore = set(labels[labels['start'] * 1000000 <
                                         curr_time_mksec]['Label'])
             candidates = list(observedBefore - usedBefore)
 

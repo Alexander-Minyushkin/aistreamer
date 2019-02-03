@@ -7,8 +7,7 @@ from luigi.contrib.gcs import GCSTarget
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 
-API_DISCOVERY_FILE = 'video-intelligence-service-discovery-v1beta1.json'
-OPERATIONS_DISCOVERY_FILE = 'video-intelligence-operations-discovery.json'
+from google.cloud import videointelligence
 
 
 class InputFileOnStorage(luigi.ExternalTask):
@@ -49,7 +48,7 @@ class DetectVideoLabels(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return GCSTarget(self.gs_path_video + '.label.json')
+        return GCSTarget(self.gs_path_video + '.label.csv')
 
     def run(self):
         """
@@ -57,48 +56,51 @@ class DetectVideoLabels(luigi.Task):
         2. write the result into the :py:meth:`*.label.json` target on Storage
         """
 
-        credentials = GoogleCredentials.get_application_default()
-
-        with open(API_DISCOVERY_FILE, 'r') as f:
-            doc = f.read()
-        video_service = discovery.build_from_document(
-            doc, credentials=credentials)
-
-        with open(OPERATIONS_DISCOVERY_FILE, 'r') as f:
-            op_doc = f.read()
-        op_service = discovery.build_from_document(
-            op_doc, credentials=credentials)
-
-        video_service_request = video_service.videos().annotate(
-            body={
-                'inputUri': self.gs_path_video,
-                'features': ['LABEL_DETECTION']
-            })
-
-        response = video_service_request.execute()
-        name = response['name']
-
-        op_service_request = op_service.operations().get(name=name)
-        response = op_service_request.execute()
-        op_start_time = str(
-            response['metadata']['annotationProgress'][0]['startTime']
-        )
-        print('Operation {} started: {}'.format(name, op_start_time))
-
-        while True:
-            response = op_service_request.execute()
-            time.sleep(30)
-            if 'done' in response and response['done'] is True:
-                break
-            else:
-                print('Operation processing ...')
-        print('The video has been successfully processed.')
-
-        lblData = response['response']['annotationResults'][0]['labelAnnotations']
-
+        """ Detects labels given a GCS path. """
+        video_client = videointelligence.VideoIntelligenceServiceClient()
+        features = [videointelligence.enums.Feature.LABEL_DETECTION]
+        operation = video_client.annotate_video(self.gs_path_video, features=features)
+        print('\nProcessing video for label annotations:\n')
+    
+        result = operation.result(timeout=900)
+        
+        print(result)
+        print('\nFinished processing.')
+        
+        segment_labels = result.annotation_results[0].shot_label_annotations
+        
+        output_csv = ""
+        for i, segment_label in enumerate(segment_labels):
+            print('Video label description: {}'.format(
+                segment_label.entity.description))
+            for category_entity in segment_label.category_entities:
+                print('\tLabel category description: {}'.format(
+                    category_entity.description))
+    
+                for i, segment in enumerate(segment_label.segments):
+                    start_time = (segment.segment.start_time_offset.seconds +
+                                  segment.segment.start_time_offset.nanos / 1e9)
+                    end_time = (segment.segment.end_time_offset.seconds +
+                                segment.segment.end_time_offset.nanos / 1e9)
+                    positions = '{}s to {}s'.format(start_time, end_time)
+                    confidence = segment.confidence
+                    print('\tSegment {}: {}'.format(i, positions))
+                    print('\tConfidence: {}'.format(confidence))
+                    
+                    output_csv_line = '{},{},{},{}\n'.format(
+                                    segment_label.entity.description, 
+                                    category_entity.description,
+                                    start_time, 
+                                    end_time)
+                    output_csv = output_csv + output_csv_line
+                    print(output_csv_line)
+                print('\n')
+        print('\n\n-------\n')  
+        print(output_csv)        
+        
         # output data
         f = self.output().open('w')
-        json.dump(lblData, f)
+        f.write(output_csv)
         f.close()
 
 

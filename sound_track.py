@@ -26,15 +26,14 @@ from tempfile import SpooledTemporaryFile
 SENTENCE_SEPARATOR = '.'
 WORD_SEPARATOR = ' '
 
+#path_to_file = "/home/alexander/Documents/video/Welcome_to_Adam_Does_Movies.mp4.label.json"
 path_to_json = "data/labels/gta001_label.json"
 db_name = 'tmp'
 
 def read_json(path_to_file):
     with open(path_to_file) as json_data:
-        d = json.load(json_data)
-    
-    headers =  ['Label','confidence','start','end']
-    
+        d = json.load(json_data)    
+    headers =  ['Label','confidence','start','end']    
     def gen_from_dict(d):
         for node in d:
             description = node['description']
@@ -43,11 +42,39 @@ def read_json(path_to_file):
                 yield [
                         description, 
                         loc['confidence'], 
-                        int(loc['segment'].get('startTimeOffset', 0)),
-                        int(loc['segment'].get('endTimeOffset',   -1))
-                        ]
-    
+                        #int(loc['segment'].get('startTimeOffset', 0)),
+                        #int(loc['segment'].get('endTimeOffset',   -1))
+                        int(float(loc['segment'].get('startTimeOffset', '0').replace('s',''))* 1000000),
+                        int(float(loc['segment'].get('endTimeOffset',   '-1').replace('s',''))* 1000000)
+                        ]    
     return pd.DataFrame(gen_from_dict(d), columns=headers)
+
+def read_json2(path_to_file):
+    with open(path_to_file) as json_data:
+        d = json.load(json_data)    
+    headers =  ['Label','confidence','start','end']    
+    def gen_from_dict(d):
+        for node in d['annotationResults'][0]['shotLabelAnnotations']:
+            description = node['entity']['description']
+            for loc in node['segments']:
+                yield [
+                        description, 
+                        loc['confidence'], 
+                        #int(loc['segment'].get('startTimeOffset', 0)),
+                        #int(loc['segment'].get('endTimeOffset',   -1))
+                        int(float(loc['segment'].get('startTimeOffset', '0').replace('s',''))* 1000000),
+                        int(float(loc['segment'].get('endTimeOffset',   '-1').replace('s',''))* 1000000)
+                        ]    
+    return pd.DataFrame(gen_from_dict(d), columns=headers)
+
+#for node in d['annotationResults'][0]['segmentLabelAnnotations']:
+#    print(node['entity']['description'])
+#    for loc in node['segments']:
+#        print(loc['confidence'])
+#        print(loc['segment']['startTimeOffset'])
+#        print(loc['segment']['endTimeOffset'])    
+#    
+#    break
 
 def textToAudioSegment(wordsToSay):
     # Convert text to sound
