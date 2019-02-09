@@ -15,6 +15,7 @@ limitations under the License.
 
 """
 import argparse
+from upload import UploadFileOnStorage
 from voice import GenVoiceFile
 
 import luigi
@@ -36,7 +37,9 @@ class MergeVideoAndAudio(luigi.Task):
         Produce file with original video an new audio cover
         :return: list of object (:py:class:`luigi.task.Task`)
         """
-        return [GenVoiceFile(gs_path_video = self.gs_path_video, text_generator = 'markov')]
+        return {'voice_file': GenVoiceFile(gs_path_video = self.gs_path_video,
+                                           text_generator = 'markov'),
+                'video': UploadFileOnStorage(self.gs_path_video)}
 
     def output(self):
         """
@@ -47,12 +50,12 @@ class MergeVideoAndAudio(luigi.Task):
         :rtype: object (:py:class:`luigi.target.Target`)
         """
 
-        return GCSTarget(self.gs_path_video + '.result.mp4')
+        return GCSTarget(self.input()['video'].path + '.result.mp4')
 
     def run(self):        
         
-        tmp_video_file = GCSClient().download(self.gs_path_video)
-        tmp_audio_file = GCSClient().download(self.requires()[0].output().path)
+        tmp_video_file = GCSClient().download(self.input()['video'].path)
+        tmp_audio_file = GCSClient().download(self.requires()['voice_file'].output().path)
 
         #'ffmpeg -i Late_For_Work.mp4 -i Late_For_Work.mp4.voice.mp3 -c:v copy -map 0:v:0 -map 1:a:0 result.mp4'
         cmd = ['ffmpeg', '-y', '-i', tmp_video_file.name, 

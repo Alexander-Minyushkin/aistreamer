@@ -18,6 +18,7 @@ limitations under the License.
 from aistreamer import DummyTextGenerator
 from textgenMarkov import MarkovTextGenerator
 
+from upload import UploadFileOnStorage
 from detect import DetectVideoLabels
 
 import luigi
@@ -74,7 +75,7 @@ class GCPTextToSpeech(TextToSpeech):
         # Names of voices can be retrieved with client.list_voices().
         voice = texttospeech.types.VoiceSelectionParams(
             language_code='en-US',
-            ssml_gender=texttospeech.enums.SsmlVoiceGender.FEMALE)
+            ssml_gender=texttospeech.enums.SsmlVoiceGender.MALE)
 
         audio_config = texttospeech.types.AudioConfig(
             audio_encoding=texttospeech.enums.AudioEncoding.MP3)
@@ -106,7 +107,8 @@ class GenVoiceFile(luigi.Task):
         We need to read *.label.json file produced by this task
         :return: list of object (:py:class:`luigi.task.Task`)
         """
-        return [DetectVideoLabels(self.gs_path_video)]
+        return {'labels_csv': DetectVideoLabels(self.gs_path_video),
+                'video': UploadFileOnStorage(self.gs_path_video)}
 
     def output(self):
         """
@@ -117,7 +119,7 @@ class GenVoiceFile(luigi.Task):
         :rtype: object (:py:class:`luigi.target.Target`)
         """
 
-        return GCSTarget(self.gs_path_video + '.voice.mp3')
+        return GCSTarget(self.input()['video'].path + '.voice.mp3')
 
     def json_labels_to_pd(self, d):
 
@@ -165,7 +167,7 @@ class GenVoiceFile(luigi.Task):
         #    d = json.load(json_data)
         #    labels = self.json_labels_to_pd(d)
 
-        labels = pd.read_csv(self.input()[0].open(), 
+        labels = pd.read_csv(self.input()['labels_csv'].open(), 
                              header=None,
                              names = ['Label', 'category', 'start', 'end'])
         print(labels)
@@ -180,6 +182,7 @@ class GenVoiceFile(luigi.Task):
         curr_time_mksec = fullTrack.duration_seconds * 1000000
 
         video_duration_mksec = max(labels['end']) * 1000000
+        print('video_duration_mksec:' + str(video_duration_mksec))
         while (curr_time_mksec < video_duration_mksec):
             observedBefore = set(labels[labels['start'] * 1000000 <
                                         curr_time_mksec]['Label'])
@@ -195,7 +198,7 @@ class GenVoiceFile(luigi.Task):
                 print("RANDOM seed word!")
 
             seedWordsToGen = seedWords.lower()
-            print(str(curr_time_mksec) + ' ' + seedWordsToGen)
+            print('curr_time_mksec:' + str(curr_time_mksec) + ' ' + seedWordsToGen)
             wordsToSay = self.generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
             print(wordsToSay)
@@ -224,6 +227,6 @@ class GenVoiceFile(luigi.Task):
 
 if __name__ == '__main__':
     luigi.run(['detect.GenVoiceFile',
-               '--gs-path-video',  'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefront1.mp4', #
+               '--gs-path-video', 'https://www.youtube.com/watch?v=i05jta1W4Wo',# 'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefront1.mp4', #
                '--text-generator','markov',
                '--workers', '1', '--local-scheduler'])

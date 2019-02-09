@@ -4,8 +4,7 @@ import json
 import luigi
 from luigi.contrib.gcs import GCSTarget
 
-from googleapiclient import discovery
-from oauth2client.client import GoogleCredentials
+from upload import UploadFileOnStorage
 
 from google.cloud import videointelligence
 
@@ -38,7 +37,7 @@ class DetectVideoLabels(luigi.Task):
         We don't read this file, just make sure it exists.
         :return: list of object (:py:class:`luigi.task.Task`)
         """
-        return [InputFileOnStorage(self.gs_path_video)]
+        return [UploadFileOnStorage(self.gs_path_video)]
 
     def output(self):
         """
@@ -48,7 +47,9 @@ class DetectVideoLabels(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return GCSTarget(self.gs_path_video + '.label.csv')
+        print(">>>>>\n")
+        print(self.input()[0].path)
+        return GCSTarget(self.input()[0].path + '.label.csv')
 
     def run(self):
         """
@@ -59,7 +60,8 @@ class DetectVideoLabels(luigi.Task):
         """ Detects labels given a GCS path. """
         video_client = videointelligence.VideoIntelligenceServiceClient()
         features = [videointelligence.enums.Feature.LABEL_DETECTION]
-        operation = video_client.annotate_video(self.gs_path_video, features=features)
+        operation = video_client.annotate_video(self.input()[0].path, 
+                                                features=features)
         print('\nProcessing video for label annotations:\n')
     
         result = operation.result(timeout=900)
@@ -106,5 +108,5 @@ class DetectVideoLabels(luigi.Task):
 
 if __name__ == '__main__':
     luigi.run(['detect.DetectVideoLabels',
-               '--gs-path-video', 'gs://amvideotest/Late_For_Work.mp4',
+               '--gs-path-video', 'https://www.youtube.com/watch?v=i05jta1W4Wo', #'gs://amvideotest/Late_For_Work.mp4',
                '--workers', '1', '--local-scheduler'])

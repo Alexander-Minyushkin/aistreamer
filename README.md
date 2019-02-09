@@ -1,6 +1,12 @@
 # aistreamer
 AI for streaming
 
+# Installation:
+Works on GCP only. Instructions to be provided
+
+# How to run
+
+python worker/merge_video.py https://www.youtube.com/watch?v=i05jta1W4Wo
 
 
 # Data

@@ -29,6 +29,9 @@ class UploadFileOnStorage(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
+        if self.gs_source_path.startswith('gs://'):
+            return GCSTarget(self.gs_source_path)
+            
         self.video_id = self.gs_source_path.split('=')[1]        
         print(self.video_id)
         
