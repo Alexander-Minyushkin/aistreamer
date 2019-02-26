@@ -45,7 +45,7 @@ class UploadFileOnStorage(luigi.ExternalTask):
         
         yt = YouTube(self.gs_source_path)
         
-        temp_result_file = yt.streams.first().download('../tmp', self.video_id)
+        temp_result_file = yt.streams.filter(file_extension='mp4').first().download('../tmp', self.video_id)
         print(temp_result_file)
         
         GCSClient().put(temp_result_file, self.output().path)   
