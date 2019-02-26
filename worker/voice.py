@@ -201,7 +201,15 @@ class GenVoiceFile(luigi.Task):
             print('curr_time_mksec:' + str(curr_time_mksec) + ' ' + seedWordsToGen)
             wordsToSay = self.generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
+                                            
+            for i in range(5):
+                if len(wordsToSay) < 100:
+                    break
+                wordsToSay = self.generator.get_text("TODO: full text so far",
+                                            seedWordsToGen)
+                                            
             print(wordsToSay)
+            print(len(wordsToSay))
 
             segment = self.textToAudioSegment(wordsToSay)
 
