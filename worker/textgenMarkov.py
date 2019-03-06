@@ -39,7 +39,9 @@ class MarkovTextParser(luigi.Task):
     task_namespace = 'detect'
     gs_path_txt = luigi.Parameter()
     
+    temp_result_file_path = "../tmp/result.db"
     
+    # https://stackoverflow.com/questions/4576077/python-split-text-on-sentences
     def split_into_sentences(self, text):
         alphabets= "([A-Za-z])"
         prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
@@ -99,7 +101,16 @@ class MarkovTextParser(luigi.Task):
         
         text_arr = self.split_into_sentences(open(tmp_txt_file.name, "r").read())
         
-        print(text_arr)
+        #print(text_arr)
+        db = Db(sqlite3.connect(self.temp_result_file_path), Sql())
+        db.setup(2)
+        
+        SENTENCE_SEPARATOR = '\n'
+        WORD_SEPARATOR = ' '
+        
+        Parser("notused", db, SENTENCE_SEPARATOR, WORD_SEPARATOR).parse_array(text_arr)
+        
+        GCSClient().put(self.temp_result_file_path, self.output().path)  
         
         tmp_txt_file.close()
 
