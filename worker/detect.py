@@ -9,22 +9,6 @@ from upload import UploadFileOnStorage
 from google.cloud import videointelligence
 
 
-class InputFileOnStorage(luigi.ExternalTask):
-    """
-    This class represents file stored on Google Storage in advance.
-    """
-    gs_path = luigi.Parameter()
-
-    def output(self):
-        """
-        Returns the target output for this task.
-        In this case, it expects a file to be present on Google Storage.
-        :return: the target output for this task.
-        :rtype: object (:py:class:`luigi.target.Target`)
-        """
-        return GCSTarget(self.gs_path)
-
-
 class DetectVideoLabels(luigi.Task):
 
     task_namespace = 'detect'
