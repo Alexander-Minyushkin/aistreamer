@@ -133,7 +133,7 @@ class MarkovTextGenerator(TextGenerator):
 
     def __init__(self, db_path):
 
-        self.db_local_path = self.download_blob('amvideotest', db_path)
+        self.db_local_path = db_path #self.download_blob('amvideotest', db_path)
 
         self.db = Db(sqlite3.connect(self.db_local_path), Sql())
         self.generator = GenratorWithSeed(self.db_local_path, self.db, Rnd())

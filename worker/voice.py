@@ -16,7 +16,7 @@ limitations under the License.
 """
 
 from aistreamer import DummyTextGenerator
-from textgenMarkov import MarkovTextGenerator
+from textgenMarkov import MarkovTextGenerator, MarkovTextParser
 
 from upload import UploadFileOnStorage
 from detect import DetectVideoLabels
@@ -95,6 +95,7 @@ class GenVoiceFile(luigi.Task):
     task_namespace = 'detect'
     gs_path_video = luigi.Parameter()
     text_generator = luigi.Parameter()
+    text_generator_source = luigi.Parameter()
 
     generator = DummyTextGenerator()
     tts = GCPTextToSpeech() # GTTSTextToSpeech()
@@ -108,7 +109,8 @@ class GenVoiceFile(luigi.Task):
         :return: list of object (:py:class:`luigi.task.Task`)
         """
         return {'labels_csv': DetectVideoLabels(self.gs_path_video),
-                'video': UploadFileOnStorage(self.gs_path_video)}
+                'video': UploadFileOnStorage(self.gs_path_video),
+                'markov_db': MarkovTextParser(self.text_generator_source)}
 
     def output(self):
         """
@@ -173,7 +175,9 @@ class GenVoiceFile(luigi.Task):
         print(labels)
 
         if self.text_generator == 'markov':
-            self.generator = MarkovTextGenerator('combined.db')            
+            tmp_file_db = GCSClient().download(self.input()['markov_db'].path)
+            print("GenVoiceFile.run markov_db tmp file path: ", tmp_file_db.name)
+            self.generator = MarkovTextGenerator(tmp_file_db.name) #'combined.db')            
 
         usedBefore = set()
 
@@ -235,6 +239,7 @@ class GenVoiceFile(luigi.Task):
 
 if __name__ == '__main__':
     luigi.run(['detect.GenVoiceFile',
-               '--gs-path-video', 'https://www.youtube.com/watch?v=i05jta1W4Wo',# 'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefront1.mp4', #
+               '--gs-path-video', 'gs://amvideotest/Late_For_Work.mp4', #'https://www.youtube.com/watch?v=i05jta1W4Wo',# 'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefront1.mp4', #
                '--text-generator','markov',
+               '--text-generator-source', 'gs://amvideotest/source/pg/pg345.txt', 
                '--workers', '1', '--local-scheduler'])

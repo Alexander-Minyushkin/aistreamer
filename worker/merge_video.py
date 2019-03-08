@@ -27,6 +27,7 @@ class MergeVideoAndAudio(luigi.Task):
     task_namespace = 'detect'
     gs_path_video = luigi.Parameter()
     text_generator = luigi.Parameter()
+    text_generator_source = luigi.Parameter()
 
     temp_result_file = "../tmp/result.mp4"
 
@@ -38,7 +39,8 @@ class MergeVideoAndAudio(luigi.Task):
         :return: list of object (:py:class:`luigi.task.Task`)
         """
         return {'voice_file': GenVoiceFile(gs_path_video = self.gs_path_video,
-                                           text_generator = 'markov'),
+                                           text_generator = 'markov',
+                                           text_generator_source = self.text_generator_source),
                 'video': UploadFileOnStorage(self.gs_path_video)}
 
     def output(self):
@@ -75,10 +77,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
     description=__doc__,
     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('path', help='GCS file path (gs://...)')
+    parser.add_argument('video', help='Youtube link or GCS file path (gs://...)')
+    parser.add_argument('txt', help='Path to surce text on GCS (gs://...)')
     args = parser.parse_args()
     
     luigi.run(['detect.MergeVideoAndAudio',
-               '--gs-path-video',  args.path, #'gs://amvideotest/Welcome_to_Adam_Does_Movies.mp4', # 'gs://amvideotest/battlefield1.mp4', #
+               '--gs-path-video',  args.video, #'gs://amvideotest/Welcome_to_Adam_Does_Movies.mp4', # 'gs://amvideotest/battlefield1.mp4', #
                '--text-generator','markov',
+               '--text-generator-source', args.txt, #'gs://amvideotest/source/pg/pg345.txt',
                '--workers', '1', '--local-scheduler'])

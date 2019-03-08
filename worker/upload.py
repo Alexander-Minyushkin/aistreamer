@@ -50,7 +50,7 @@ class UploadFileOnStorage(luigi.ExternalTask):
             return GCSTarget(self.gs_source_path)
             
         self.video_id = self.gs_source_path.split('=')[1]        
-        print(self.video_id)
+        print("UploadFileOnStorage.output: video_id=", self.video_id)
         
         output_file_path = gs_youtube_folder + self.video_id +'.mp4'
         
@@ -63,7 +63,7 @@ class UploadFileOnStorage(luigi.ExternalTask):
         yt = YouTube(self.gs_source_path)
         
         temp_result_file = yt.streams.filter(file_extension='mp4').first().download('../tmp', self.video_id)
-        print(temp_result_file)
+        print("UploadFileOnStorage.run downloaded to: ", temp_result_file)
         
         GCSClient().put(temp_result_file, self.output().path)   
 
