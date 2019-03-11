@@ -28,6 +28,7 @@ import random
 import pandas as pd
 from gtts import gTTS
 from pydub import AudioSegment
+from textblob import TextBlob
 
 class TextToSpeech():
 
@@ -96,6 +97,7 @@ class GenVoiceFile(luigi.Task):
     gs_path_video = luigi.Parameter()
     text_generator = luigi.Parameter()
     text_generator_source = luigi.Parameter()
+    random_seed  = luigi.IntParameter(default=123)
 
     generator = DummyTextGenerator()
     tts = GCPTextToSpeech() # GTTSTextToSpeech()
@@ -121,7 +123,7 @@ class GenVoiceFile(luigi.Task):
         :rtype: object (:py:class:`luigi.target.Target`)
         """
 
-        return GCSTarget(self.input()['video'].path + '.voice.mp3')
+        return GCSTarget(self.input()['video'].path + "_" + str(self.random_seed) + '.mp3')
 
     def json_labels_to_pd(self, d):
 
@@ -164,6 +166,8 @@ class GenVoiceFile(luigi.Task):
 
     def run(self):
         print(">>>> Run GenVoiceFile")
+        
+        random.seed(self.random_seed)
 
         #with self.input()[0].open() as json_data:
         #    d = json.load(json_data)
@@ -213,6 +217,12 @@ class GenVoiceFile(luigi.Task):
                                             seedWordsToGen)
                                             
             print(wordsToSay)
+            wordsToSay_corrected = str(TextBlob(wordsToSay).correct())
+            if wordsToSay_corrected  != wordsToSay:
+                wordsToSay = wordsToSay_corrected
+                print("CORRECTED to: "+ wordsToSay)
+                
+
             print(len(wordsToSay))
 
             segment = self.textToAudioSegment(wordsToSay)
@@ -242,4 +252,5 @@ if __name__ == '__main__':
                '--gs-path-video', 'gs://amvideotest/Late_For_Work.mp4', #'https://www.youtube.com/watch?v=i05jta1W4Wo',# 'gs://amvideotest/Late_For_Work.mp4', # 'gs://amvideotest/battlefront1.mp4', #
                '--text-generator','markov',
                '--text-generator-source', 'gs://amvideotest/source/pg/pg345.txt', 
+               '--random-seed', "1111", 
                '--workers', '1', '--local-scheduler'])
