@@ -21,6 +21,8 @@ from upload import InputFileOnStorage
 
 import luigi
 from luigi.contrib.gcs import GCSTarget, GCSClient
+from luigi.local_target import atomic_file
+
 
 from markov import Db
 from markov import GenratorWithSeed
@@ -34,6 +36,45 @@ import sqlite3
 
 from google.cloud import storage
 
+# https://stackoverflow.com/questions/4576077/python-split-text-on-sentences
+def split_into_sentences(text):
+    alphabets= "([A-Za-z])"
+    prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
+    suffixes = "(Inc|Ltd|Jr|Sr|Co)"
+    starters = "(Mr|Mrs|Ms|Dr|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
+    acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
+    websites = "[.](com|net|org|io|gov)"
+        
+    text = " " + text + "  "
+    text = text.replace("\n"," ")
+    text = re.sub(prefixes,"\\1<prd>",text)
+    text = re.sub(websites,"<prd>\\1",text)
+    if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
+    text = re.sub("\s" + alphabets + "[.] "," \\1<prd> ",text)
+    text = re.sub(acronyms+" "+starters,"\\1<stop> \\2",text)
+    text = re.sub(alphabets + "[.]" + alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>\\3<prd>",text)
+    text = re.sub(alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>",text)
+    text = re.sub(" "+suffixes+"[.] "+starters," \\1<stop> \\2",text)
+    text = re.sub(" "+suffixes+"[.]"," \\1<prd>",text)
+    text = re.sub(" " + alphabets + "[.]"," \\1<prd>",text)
+    if "”" in text: text = text.replace(".”","”.")
+    if "\"" in text: text = text.replace(".\"","\".")
+    if "!" in text: text = text.replace("!\"","\"!")
+    if "?" in text: text = text.replace("?\"","\"?")
+    if '"' in text:  text = text.replace('"','')
+    text = text.replace(';','')
+    text = text.replace(',','')
+    text = text.replace('_','')
+    text = text.replace('-','')
+    text = text.replace(".","<stop>")
+    text = text.replace("?"," ?<stop>")
+    text = text.replace("!"," !<stop>")
+    text = text.replace("<prd>",".")
+    sentences = text.lower().split("<stop>")
+    sentences = sentences[:-1]
+    sentences = [s.strip() for s in sentences]
+    return sentences  
+    
 class MarkovTextParser(luigi.Task):
 
     task_namespace = 'detect'
@@ -41,40 +82,6 @@ class MarkovTextParser(luigi.Task):
     
     temp_result_file_path = "../tmp/result.db"
     
-    # https://stackoverflow.com/questions/4576077/python-split-text-on-sentences
-    def split_into_sentences(self, text):
-        alphabets= "([A-Za-z])"
-        prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
-        suffixes = "(Inc|Ltd|Jr|Sr|Co)"
-        starters = "(Mr|Mrs|Ms|Dr|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
-        acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
-        websites = "[.](com|net|org|io|gov)"
-        
-        text = " " + text + "  "
-        text = text.replace("\n"," ")
-        text = re.sub(prefixes,"\\1<prd>",text)
-        text = re.sub(websites,"<prd>\\1",text)
-        if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
-        text = re.sub("\s" + alphabets + "[.] "," \\1<prd> ",text)
-        text = re.sub(acronyms+" "+starters,"\\1<stop> \\2",text)
-        text = re.sub(alphabets + "[.]" + alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>\\3<prd>",text)
-        text = re.sub(alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>",text)
-        text = re.sub(" "+suffixes+"[.] "+starters," \\1<stop> \\2",text)
-        text = re.sub(" "+suffixes+"[.]"," \\1<prd>",text)
-        text = re.sub(" " + alphabets + "[.]"," \\1<prd>",text)
-        if "”" in text: text = text.replace(".”","”.")
-        if "\"" in text: text = text.replace(".\"","\".")
-        if "!" in text: text = text.replace("!\"","\"!")
-        if "?" in text: text = text.replace("?\"","\"?")
-        text = text.replace(".",".<stop>")
-        text = text.replace("?","?<stop>")
-        text = text.replace("!","!<stop>")
-        text = text.replace("<prd>",".")
-        sentences = text.split("<stop>")
-        sentences = sentences[:-1]
-        sentences = [s.strip() for s in sentences]
-        return sentences    
-
     def requires(self):
         """
         This task's dependencies:
@@ -99,16 +106,20 @@ class MarkovTextParser(luigi.Task):
     def run(self):
         tmp_txt_file = GCSClient().download(self.input()[0].path)
         
-        text_arr = self.split_into_sentences(open(tmp_txt_file.name, "r").read())
+        text_arr = split_into_sentences(open(tmp_txt_file.name, "r").read())
         
-        #print(text_arr)
-        db = Db(sqlite3.connect(self.temp_result_file_path), Sql())
+        print(text_arr)
+        
+        tmp_db = atomic_file(self.temp_result_file_path)
+        tmp_db.generate_tmp_path(tmp_db.path)
+        db = Db(sqlite3.connect(tmp_db.tmp_path), Sql())
         db.setup(2)
         
         SENTENCE_SEPARATOR = '\n'
         WORD_SEPARATOR = ' '
         
         Parser("notused", db, SENTENCE_SEPARATOR, WORD_SEPARATOR).parse_array(text_arr)
+        tmp_db.close()
         
         GCSClient().put(self.temp_result_file_path, self.output().path)  
         
