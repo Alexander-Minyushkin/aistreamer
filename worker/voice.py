@@ -210,7 +210,7 @@ class GenVoiceFile(luigi.Task):
             wordsToSay = self.generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
                                             
-            for i in range(5):
+            for _ in range(5):
                 if len(wordsToSay) < 100:
                     break
                 wordsToSay = self.generator.get_text("TODO: full text so far",
