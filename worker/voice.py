@@ -209,13 +209,22 @@ class GenVoiceFile(luigi.Task):
             print('curr_time_mksec:' + str(curr_time_mksec) + ' ' + seedWordsToGen)
             wordsToSay = self.generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
-                                            
+                      
+            acceptable_len = 140 
+            shortest_wordsToSay = wordsToSay
+            
             for i in range(5):
-                if len(wordsToSay) < 100:
+                print(f"Generated sentence length: {len(wordsToSay)}")
+                if len(wordsToSay) < acceptable_len:
+                    shortest_wordsToSay = wordsToSay
                     break
                 wordsToSay = self.generator.get_text("TODO: full text so far",
                                             seedWordsToGen)
-                                            
+                if len(wordsToSay) < len(shortest_wordsToSay):
+                    shortest_wordsToSay = wordsToSay
+                acceptable_len = acceptable_len + 10
+                    
+            wordsToSay = shortest_wordsToSay            
             print(wordsToSay)
             wordsToSay_corrected = str(TextBlob(wordsToSay).correct())
             if wordsToSay_corrected  != wordsToSay:
@@ -223,7 +232,7 @@ class GenVoiceFile(luigi.Task):
                 print("CORRECTED to: "+ wordsToSay)
                 
 
-            print(len(wordsToSay))
+            print(f"Generated sentence length, final: {len(wordsToSay)}")
 
             segment = self.textToAudioSegment(wordsToSay)
 
